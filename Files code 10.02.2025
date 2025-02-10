@@ -1,0 +1,58 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_PRODUCTS 10
+
+typedef struct {
+    char product_name[20];
+    int price;
+    int quantity;
+} Product;
+
+void find_max_purchase(Product products[], int count, int budget) {
+    printf("With a budget of %d, you can buy:\n", budget);
+    int total_spent = 0;
+    
+    for (int i = 0; i < count; i++) {
+        int max_items = budget / products[i].price;
+        if (max_items > products[i].quantity) {
+            max_items = products[i].quantity;
+        }
+        
+        if (max_items > 0) {
+            printf("%d of %s (cost: %d each)\n", max_items, products[i].product_name, products[i].price);
+            budget -= max_items * products[i].price;
+            total_spent += max_items * products[i].price;
+        }
+    }
+    printf("Total spent: %d, Remaining budget: %d\n", total_spent, budget);
+}
+
+int main(void) {
+    FILE *file;
+    Product products[MAX_PRODUCTS];
+    int count = 0, budget;
+    
+    file = fopen("Proge2data.txt", "r");
+    if (file == NULL) {
+        printf("File not found.\n");
+        return -1;
+    }
+    
+    while (count < MAX_PRODUCTS && fscanf(file, "%s %d %d", 
+            products[count].product_name, 
+            &products[count].price, 
+            &products[count].quantity) == 3) {
+        count++;
+    }
+    fclose(file);
+    
+    printf("Enter your budget: ");
+    scanf("%d", &budget);
+    
+    find_max_purchase(products, count, budget);
+    
+    return 0;
+}
+
