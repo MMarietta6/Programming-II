@@ -1,0 +1,145 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// Structure to hold date information
+typedef struct {
+    int day;
+    char month[20]; // Month as a string
+    int year;
+} Date;
+
+// Function prototypes
+int openFileFunction(FILE **inputFile);
+int recordsCounter(FILE *inputFile, Date dates[], int maxRecords);
+void sortDates(Date dates[], int count);
+void writeDatesToFiles(Date dates[], int count);
+void displayDates(Date dates[], int count);
+void splitDate(int bigNumber, Date *date);
+
+int main(void) {
+    Date dates[10]; // Array to hold up to 10 dates
+    int count = 0;
+    FILE *inputFile;
+
+    // Open the file and read dates
+    if (openFileFunction(&inputFile) == 1) {
+        count = recordsCounter(inputFile, dates, 10); // Read up to 10 records
+        fclose(inputFile); // Close the file after reading
+    } else {
+        printf("File does not exist.\n");
+        return 1; // Exit if file does not exist
+    }
+
+    // Sort dates by year, month, and day
+    sortDates(dates, count);
+
+    // Write sorted dates to files
+    writeDatesToFiles(dates, count);
+
+    // Display the sorted dates
+    displayDates(dates, count);
+
+    return 0;
+}
+
+// Function to open the file
+int openFileFunction(FILE **inputFile) {
+    const char *filename = "classdata.txt"; // Hardcoded filename
+    *inputFile = fopen(filename, "r");
+    if (*inputFile != NULL) {
+        return 1; // File opened successfully
+    }
+    return 0; // File could not be opened
+}
+
+// Function to read dates from a file
+int recordsCounter(FILE *inputFile, Date dates[], int maxRecords) {
+    int count = 0;
+    int bigNumber;
+
+    while (count < maxRecords && fscanf(inputFile, "%d", &bigNumber) == 1) {
+        splitDate(bigNumber, &dates[count]); // Split the big number into date components
+        count++;
+    }
+    return count;
+}
+
+// Function to split a big number into day, month, and year
+void splitDate(int bigNumber, Date *date) {
+    date->day = bigNumber / 1000000;          // First two digits
+    int monthNumber = (bigNumber / 10000) % 100;  // Next two digits
+    date->year = bigNumber % 10000;           // Last four digits
+
+    // Convert month number to month string
+    switch (monthNumber) {
+        case 1: strcpy(date->month, "January"); break;
+        case 2: strcpy(date->month, "February"); break;
+        case 3: strcpy(date->month, "March"); break;
+        case 4: strcpy(date->month, "April"); break;
+        case 5: strcpy(date->month, "May"); break;
+        case 6: strcpy(date->month, "June"); break;
+        case 7: strcpy(date->month, "July"); break;
+        case 8: strcpy(date->month, "August"); break;
+        case 9: strcpy(date->month, "September"); break;
+        case 10: strcpy(date->month, "October"); break;
+        case 11: strcpy(date->month, "November"); break;
+        case 12: strcpy(date->month, "December"); break;
+        default: strcpy(date->month, "Invalid"); break; // Handle invalid month
+    }
+}
+
+// Function to sort dates by year, month, and day
+void sortDates(Date dates[], int count) {
+    // Simple bubble sort for demonstration purposes
+    for (int i = 0; i < count - 1; i++) {
+        for (int j = 0; j < count - i - 1; j++) {
+            // Compare years first, then months, then days
+            if (dates[j].year > dates[j + 1].year || 
+                (dates[j].year == dates[j + 1].year && strcmp(dates[j].month, dates[j + 1].month) > 0) || 
+                (dates[j].year == dates[j + 1].year && strcmp(dates[j].month, dates[j + 1].month) == 0 && dates[j].day > dates[j + 1].day)) {
+                // Swap dates
+                Date temp = dates[j];
+                dates[j] = dates[j + 1];
+                dates[j + 1] = temp;
+            }
+        }
+    }
+}
+
+// Function to write sorted dates to different files based on century
+void writeDatesToFiles(Date dates[], int count) {
+    FILE *file;
+    for (int century = 1900; century <= 2100; century += 100) {
+        char filename[20];
+        sprintf(filename, "dates_%d.txt", century);
+        file = fopen(filename, "w");
+        if (file == NULL) {
+            perror("Error opening file for writing");
+            exit(EXIT_FAILURE);
+        }
+
+        // Write the header for the file
+        fprintf(file, "Dates in the %d's:\n", century);
+        fprintf(file, "Day Month Year\n");
+
+        for (int i = 0; i < count; i++) {
+            if (dates[i].year >= century && dates[i].year < century + 100) {
+                fprintf(file, "%d %s %d\n", dates[i].day, dates[i].month, dates[i].year);
+            }
+        }
+
+        fclose(file);
+    }
+}
+
+// Function to display the sorted dates
+void displayDates(Date dates[], int count) {
+    printf("Sorted Dates:\n");
+    printf("Day Month Year\n");
+    for (int i = 0; i < count; i++) {
+        printf("%d %s %d\n", dates[i].day, dates[i].month, dates[i].year);
+    }
+    printf("Press Enter to continue...");
+    getchar(); // Wait for the user to press Enter
+}
