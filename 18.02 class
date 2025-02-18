@@ -1,0 +1,169 @@
+//raamatu ülesanne, analüüsida
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdbool.h>
+
+#define MAX_WORD_LENGTH 50
+#define MAX_WORDS 1000
+#define MAX_SENTENCE_LENGTH 200
+
+typedef struct {
+    char word[MAX_WORD_LENGTH];
+    int frequency;
+} WordFrequency;
+
+bool isValidWord(const char *word);
+int isStopWord(const char *word);
+int compareFrequency(const void *a, const void *b);
+
+void analyzeBook(const char *filename, WordFrequency *wordFrequencies, int *wordCount, int *sentenceCount, int *totalWordCount, int *maxSentenceLength, int *minSentenceLength, int *dialogCount) {
+    FILE *fp = fopen(filename, "r");
+    if (fp == NULL) {
+        perror("Error opening file");
+        exit(1);
+    }
+
+    char line[MAX_SENTENCE_LENGTH];
+    *wordCount = 0;
+    *sentenceCount = 0;
+    *totalWordCount = 0;
+    *maxSentenceLength = 0;
+    *minSentenceLength = MAX_SENTENCE_LENGTH;
+    *dialogCount = 0;
+
+    while (fgets(line, MAX_SENTENCE_LENGTH, fp) != NULL) {
+        (*sentenceCount)++;
+
+        int currentSentenceLength = 0;
+        char *token = strtok(line, " \t\n\r.,!?\"'();:—-");
+
+        while (token != NULL) {
+            int tokenLen = strlen(token);
+
+            for (int i = 0; i < tokenLen; i++) {
+                token[i] = tolower(token[i]);
+            }
+
+            int len = strlen(token);
+            while (len > 0 && ispunct(token[len - 1])) {
+                token[len - 1] = '\0';
+                len--;
+            }
+
+            if (strlen(token) > 0 && isValidWord(token)) {
+                if (!isStopWord(token)) {
+                    (*totalWordCount)++;
+                    currentSentenceLength++;
+
+                    int found = 0;
+                    for (int i = 0; i < *wordCount; i++) {
+                        if (strcmp(wordFrequencies[i].word, token) == 0) {
+                            wordFrequencies[i].frequency++;
+                            found = 1;
+                            break;
+                        }
+                    }
+
+                    if (!found && *wordCount < MAX_WORDS - 1) {
+                        strcpy(wordFrequencies[*wordCount].word, token);
+                        wordFrequencies[*wordCount].frequency = 1;
+                        (*wordCount)++;
+                    }
+                }
+            }
+
+            token = strtok(NULL, " \t\n\r.,!?\"'();:—-");
+        }
+
+        // Count all " symbols in the line (Corrected Logic)
+        for (int i = 0; line[i] != '\0'; i++) {
+            if (line[i] == '"') {
+                (*dialogCount)++;
+            }
+        }
+
+        if (currentSentenceLength > *maxSentenceLength) {
+            *maxSentenceLength = currentSentenceLength;
+        }
+        if (currentSentenceLength < *minSentenceLength && currentSentenceLength > 0) {
+            *minSentenceLength = currentSentenceLength;
+        }
+    }
+
+    fclose(fp);
+}
+
+bool isValidWord(const char *word) {
+    if (strlen(word) == 0) return false;
+
+    for (int i = 0; word[i] != '\0'; i++) {
+        if (!isalnum(word[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+int isStopWord(const char *word) {
+    char *stopWords[] = {"the", "a", "is", "and", "of", "to", "in", "that", "it", "he", "she", "they", "i", "you", "this", "that", "these", "those", "but", "not", "what", "when", "where", "how", "who", "whom"};
+    int numStopWords = sizeof(stopWords) / sizeof(stopWords[0]);
+
+    for (int i = 0; i < numStopWords; i++) {
+        if (strcmp(word, stopWords[i]) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int compareFrequency(const void *a, const void *b) {
+    WordFrequency *wf1 = (WordFrequency *)a;
+    WordFrequency *wf2 = (WordFrequency *)b;
+    return wf2->frequency - wf1->frequency;
+}
+
+int main() {
+    WordFrequency wordFrequencies1[MAX_WORDS];
+    WordFrequency wordFrequencies2[MAX_WORDS];
+    int wordCount1, wordCount2, sentenceCount1, sentenceCount2;
+    int totalWordCount1, totalWordCount2;
+    int maxSentenceLength1, minSentenceLength1;
+    int maxSentenceLength2, minSentenceLength2;
+    int dialogCount1, dialogCount2;
+
+    analyzeBook("raamat.txt", wordFrequencies1, &wordCount1, &sentenceCount1, &totalWordCount1, &maxSentenceLength1, &minSentenceLength1, &dialogCount1);
+    //analyzeBook("book2.txt", wordFrequencies2, &wordCount2, &sentenceCount2, &totalWordCount2, &maxSentenceLength2, &minSentenceLength2, &dialogCount2);
+
+    qsort(wordFrequencies1, wordCount1, sizeof(WordFrequency), compareFrequency);
+    //qsort(wordFrequencies2, wordCount2, sizeof(WordFrequency), compareFrequency);
+
+    printf("Book 1 Analysis:\n");
+    printf("Total Words: %d\n", totalWordCount1);
+    printf("Total Sentences: %d\n", sentenceCount1);
+    printf("Longest Sentence: %d words\n", maxSentenceLength1);
+    printf("Shortest Sentence: %d words\n", minSentenceLength1);
+    printf("Top 15 Frequent Words:\n");
+    for (int i = 0; i < 15 && i < wordCount1; i++) {
+        printf("%s: %d\n", wordFrequencies1[i].word, wordFrequencies1[i].frequency);
+    }
+    printf("The amount of dialogs: %d\n", dialogCount1);
+    printf("\n");
+/*
+    printf("Book 2 Analysis:\n");
+    printf("Total Words: %d\n", totalWordCount2);
+    printf("Total Sentences: %d\n", sentenceCount2);
+    printf("Longest Sentence: %d words\n", maxSentenceLength2);
+    printf("Shortest Sentence: %d words\n", minSentenceLength2);
+    printf("Top 15 Frequent Words:\n");
+    for (int i = 0; i < 15 && i < wordCount2; i++) {
+        printf("%s: %d\n", wordFrequencies2[i].word, wordFrequencies2[i].frequency);
+    }
+    printf("The amount of dialogs: %d\n", dialogCount2);
+    printf("\n");
+**/
+    return 0;
+}
