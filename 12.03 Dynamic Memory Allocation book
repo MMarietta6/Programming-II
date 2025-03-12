@@ -1,0 +1,194 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdbool.h>
+
+typedef struct {
+    char *word;
+    int frequency;
+} WordFrequency;
+
+bool isValidWord(const char *word);
+int isStopWord(const char *word);
+int compareFrequency(const void *a, const void *b);
+void analyzeBook(const char *filename, WordFrequency **wordFrequencies, int *wordCount, int *wordCapacity, int *sentenceCount, int *totalWordCount, int *maxSentenceLength, int *minSentenceLength);
+void freeWordFrequencies(WordFrequency *wordFrequencies, int wordCount);
+void printAnalysis(WordFrequency *wordFrequencies, int wordCount, int totalWordCount, int sentenceCount, int maxSentenceLength, int minSentenceLength);
+int countWords(const char *line);
+
+int main() {
+    WordFrequency *wordFrequencies1 = NULL;
+    int wordCount1 = 0, wordCapacity1 = 10;
+    int sentenceCount1, totalWordCount1, maxSentenceLength1, minSentenceLength1;
+
+    analyzeBook("raamat.txt", &wordFrequencies1, &wordCount1, &wordCapacity1, &sentenceCount1, &totalWordCount1, &maxSentenceLength1, &minSentenceLength1);
+
+    if (wordFrequencies1 != NULL) {
+        qsort(wordFrequencies1, wordCount1, sizeof(WordFrequency), compareFrequency);
+        printAnalysis(wordFrequencies1, wordCount1, totalWordCount1, sentenceCount1, maxSentenceLength1, minSentenceLength1);
+        freeWordFrequencies(wordFrequencies1, wordCount1);
+    }
+
+    return 0;
+}
+
+void printAnalysis(WordFrequency *wordFrequencies, int wordCount, int totalWordCount, int sentenceCount, int maxSentenceLength, int minSentenceLength) {
+    printf("Book 1 Analysis:\n");
+    printf("Total Words: %d\n", totalWordCount);
+    printf("Total Sentences: %d\n", sentenceCount);
+    printf("Longest Sentence: %d words\n", maxSentenceLength);
+    printf("Shortest Sentence: %d words\n", minSentenceLength);
+    printf("Top 15 Frequent Words:\n");
+    for (int i = 0; i < 250 && i < wordCount; i++) {
+        printf("%s: %d\n", wordFrequencies[i].word, wordFrequencies[i].frequency);
+    }
+    printf("\n");
+}
+
+void analyzeBook(const char *filename, WordFrequency **wordFrequencies, int *wordCount, int *wordCapacity, int *sentenceCount, int *totalWordCount, int *maxSentenceLength, int *minSentenceLength) {
+    FILE *fp = fopen(filename, "r");
+    if (fp == NULL) {
+        perror("Error opening file");
+        exit(1);
+    }
+
+    *wordFrequencies = (WordFrequency *)calloc(*wordCapacity, sizeof(WordFrequency));
+    if (*wordFrequencies == NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
+        fclose(fp);
+        exit(1);
+    }
+
+    char line[200];
+    *wordCount = 0;
+    *sentenceCount = 0;
+    *totalWordCount = 0;
+    *maxSentenceLength = 0;
+    *minSentenceLength = 200;
+
+    while (fgets(line, 200, fp) != NULL) {
+        (*sentenceCount)++;
+        *totalWordCount += countWords(line); // Use countWords function to accurately count words
+
+        int currentSentenceLength = countWords(line);
+
+        char *token = strtok(strdup(line), " \t\n\r.,!?\"'();:—-"); //strdup here
+
+        while (token != NULL) {
+            int tokenLen = strlen(token);
+
+            for (int i = 0; i < tokenLen; i++) {
+                token[i] = tolower(token[i]);
+            }
+
+            int len = strlen(token);
+            while (len > 0 && ispunct(token[len - 1])) {
+                token[len - 1] = '\0';
+                len--;
+            }
+
+            if (strlen(token) > 0 && isValidWord(token)) {
+                if (!isStopWord(token)) {
+
+                    int found = 0;
+                    for (int i = 0; i < *wordCount; i++) {
+                        if (strcmp((*wordFrequencies)[i].word, token) == 0) {
+                            (*wordFrequencies)[i].frequency++;
+                            found = 1;
+                            break;
+                        }
+                    }
+
+                    if (!found) {
+                        if (*wordCount >= *wordCapacity) {
+                            *wordCapacity *= 2;
+                            *wordFrequencies = (WordFrequency *)realloc(*wordFrequencies, *wordCapacity * sizeof(WordFrequency));
+                            if (*wordFrequencies == NULL) {
+                                fprintf(stderr, "Memory reallocation failed\n");
+                                fclose(fp);
+                                freeWordFrequencies(*wordFrequencies, *wordCount);
+                                exit(1);
+                            }
+                        }
+                        (*wordFrequencies)[*wordCount].word = (char*)malloc(strlen(token) + 1);
+                        if ((*wordFrequencies)[*wordCount].word == NULL) {
+                            fprintf(stderr, "Memory allocation failed\n");
+                            fclose(fp);
+                            freeWordFrequencies(*wordFrequencies, *wordCount);
+                            exit(1);
+                        }
+                        strcpy((*wordFrequencies)[*wordCount].word, token);
+                        (*wordFrequencies)[*wordCount].frequency = 1;
+                        (*wordCount)++;
+                    }
+                }
+            }
+
+            token = strtok(NULL, " \t\n\r.,!?\"'();:—-");
+        }
+
+        if (currentSentenceLength > *maxSentenceLength) {
+            *maxSentenceLength = currentSentenceLength;
+        }
+        if (currentSentenceLength < *minSentenceLength && currentSentenceLength > 0) {
+            *minSentenceLength = currentSentenceLength;
+        }
+    }
+
+    fclose(fp);
+}
+
+void freeWordFrequencies(WordFrequency *wordFrequencies, int wordCount) {
+    if (wordFrequencies != NULL) {
+        for (int i = 0; i < wordCount; i++) {
+            free(wordFrequencies[i].word);
+        }
+        free(wordFrequencies);
+    }
+}
+
+bool isValidWord(const char *word) {
+    if (strlen(word) == 0) return false;
+
+    for (int i = 0; word[i] != '\0'; i++) {
+        if (!isalnum(word[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+int isStopWord(const char *word) {
+    char *stopWords[] = {"the", "a", "is", "and", "of", "to", "in", "that", "it", "he", "she", "they", "i", "you", "this", "that", "these", "those", "but", "not", "what", "when", "where", "how", "who", "whom"};
+    int numStopWords = sizeof(stopWords) / sizeof(stopWords[0]);
+
+    for (int i = 0; i < numStopWords; i++) {
+        if (strcmp(word, stopWords[i]) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int compareFrequency(const void *a, const void *b) {
+    WordFrequency *wf1 = (WordFrequency *)a;
+    WordFrequency *wf2 = (WordFrequency *)b;
+    return wf2->frequency - wf1->frequency;
+}
+
+int countWords(const char *line) {
+    int count = 0;
+    char *copy = strdup(line);
+    if(copy != NULL){
+        char *token = strtok(copy, " \t\n\r.,!?\"'();:—-");
+        while (token != NULL) {
+            if (strlen(token) > 0 && isValidWord(token)) {
+                count++;
+            }
+            token = strtok(NULL, " \t\n\r.,!?\"'();:—-");
+        }
+        free(copy);
+    }
+    return count;
+}
