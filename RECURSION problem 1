@@ -1,0 +1,70 @@
+// 1. Library
+#include <stdio.h>
+
+// 2. Definitions
+// (None needed for this problem)
+
+// 3. Prototypes
+void getInput(int *n);
+int validateInput(int n);
+void solveNuggets(int n);
+void printSolution(int boxes6, int boxes9, int boxes20);
+void printImpossible(int n);
+
+// 4. Main
+int main() {
+    // 4.1 Variable declarations
+    int n;
+
+    // 4.2 Calls to functions
+    while (1) {
+        getInput(&n);
+        if (validateInput(n)) {
+            solveNuggets(n);
+            break;
+        }
+    }
+    return 0;
+}
+
+// 5. Functions
+void getInput(int *n) {
+    printf("Sisesta nuggetite arv (N): ");
+    scanf("%d", n);
+}
+
+int validateInput(int n) {
+    if (n <= 0) {
+        printf("Palun sisesta positiivne arv.\n");
+        return 0; // Return 0 (false) for invalid input
+    }
+    return 1; // Return 1 (true) for valid input
+}
+
+void solveNuggets(int n) {
+    int boxes6, boxes9, boxes20;
+    int foundSolution = 0;
+
+    for (boxes20 = n / 20; boxes20 >= 0; boxes20--) {
+        for (boxes9 = (n - boxes20 * 20) / 9; boxes9 >= 0; boxes9--) {
+            boxes6 = (n - boxes20 * 20 - boxes9 * 9) / 6;
+            if (boxes6 * 6 + boxes9 * 9 + boxes20 * 20 == n) {
+                foundSolution = 1;
+                printSolution(boxes6, boxes9, boxes20);
+                return;
+            }
+        }
+    }
+
+    if (!foundSolution) {
+        printImpossible(n);
+    }
+}
+
+void printSolution(int boxes6, int boxes9, int boxes20) {
+    printf("6x Box: %d\n9x Box: %d\n20x Box: %d\n", boxes6, boxes9, boxes20);
+}
+
+void printImpossible(int n) {
+    printf("Ei ole võimalik anda %d tükki.\n", n);
+}
