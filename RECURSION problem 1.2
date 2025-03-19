@@ -1,0 +1,45 @@
+// 1. Library
+#include <stdio.h>
+
+// 2. Definitions
+#define MAX_CHECK 100 // Maximum number to check
+
+// 3. Prototypes
+int isPossible(int n);
+int findMaxImpossible();
+
+// 4. Main
+int main() {
+    // 4.1 Variable declarations
+    int maxImpossible;
+
+    // 4.2 Calls to functions
+    maxImpossible = findMaxImpossible();
+    printf("Suurim võimatu nuggetite arv: %d\n", maxImpossible);
+
+    return 0;
+}
+
+// 5. Functions
+int isPossible(int n) {
+    int boxes6, boxes9, boxes20;
+    for (boxes20 = n / 20; boxes20 >= 0; boxes20--) {
+        for (boxes9 = (n - boxes20 * 20) / 9; boxes9 >= 0; boxes9--) {
+            boxes6 = (n - boxes20 * 20 - boxes9 * 9) / 6;
+            if (boxes6 * 6 + boxes9 * 9 + boxes20 * 20 == n) {
+                return 1; // Possible
+            }
+        }
+    }
+    return 0; // Impossible
+}
+
+int findMaxImpossible() {
+    int maxImpossible = 0;
+    for (int i = 1; i < MAX_CHECK; i++) {
+        if (!isPossible(i)) {
+            maxImpossible = i;
+        }
+    }
+    return maxImpossible;
+}
